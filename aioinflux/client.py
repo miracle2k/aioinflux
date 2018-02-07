@@ -7,17 +7,18 @@ from collections import defaultdict
 from functools import wraps, partialmethod as pm
 from itertools import chain
 from typing import (Union, AnyStr, Mapping, Iterable,
-                    Optional, Callable, AsyncGenerator)
+                    Optional, Callable, Any)
 from urllib.parse import urlencode
 
 import aiohttp
 
 from . import pd, no_pandas_warning
+from async_generator import async_generator, yield_
 from .iterutils import InfluxDBResult, InfluxDBChunkedResult
 from .serialization import parse_data, make_df
 
 PointType = Union[AnyStr, Mapping] if pd is None else Union[AnyStr, Mapping, pd.DataFrame]
-ResultType = Union[AsyncGenerator, dict, InfluxDBResult, InfluxDBChunkedResult]
+ResultType = Union[Any, dict, InfluxDBResult, InfluxDBChunkedResult]
 
 # Aioinflux uses logging mainly for debugging purposes.
 # Please attach your own handlers if you need logging.
@@ -53,7 +54,7 @@ class InfluxDBClient:
                  username: Optional[str] = None,
                  password: Optional[str] = None,
                  database: Optional[str] = None,
-                 loop: Optional[asyncio.BaseEventLoop] = None,
+                 loop: Optional[asyncio.BaseEventLoop] = None
                  ):
         """
         The InfluxDBClient object holds information necessary to interact with InfluxDB.
@@ -237,6 +238,7 @@ class InfluxDBClient:
             a dictionary containing the parsed JSON response.
         """
 
+        @async_generator
         async def _chunked_generator(url, data):
             async with self._session.post(url, data=data) as resp:
                 # Hack to avoid aiohttp raising ValueError('Line is too long')
@@ -245,7 +247,7 @@ class InfluxDBClient:
                 async for chunk in resp.content:
                     chunk = json.loads(chunk)
                     self._check_error(chunk)
-                    yield chunk
+                    await yield_(chunk)
 
         try:
             if args:

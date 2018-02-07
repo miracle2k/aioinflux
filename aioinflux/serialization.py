@@ -128,7 +128,7 @@ def make_df(resp, tag_cache=None) -> DataFrameType:
         df = pd.DataFrame(series['values'], columns=series['columns'])
         if 'time' not in df.columns:
             return df
-        df: pd.DataFrame = df.set_index(pd.to_datetime(df['time'])).drop('time', axis=1)
+        df = df.set_index(pd.to_datetime(df['time'])).drop('time', axis=1)
         df.index = df.index.tz_localize('UTC')
         df.index.name = None
         if 'tags' in series:
