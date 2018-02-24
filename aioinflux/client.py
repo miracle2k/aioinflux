@@ -173,7 +173,7 @@ class AsyncInfluxDBClient:
         async def _chunked_generator(func, url, data):
             async with func(url, **data) as resp:
                 async for chunk in resp.content:
-                    chunk = json.loads(chunk)
+                    chunk = json.loads(chunk.decode('utf-8'))
                     if 'error' in chunk:
                         raise InfluxDBError(chunk)
                     for statement in chunk['results']:
