@@ -10,6 +10,8 @@ from urllib.parse import urlencode
 
 import aiohttp
 import pandas as pd
+from async_generator import async_generator, yield_
+
 
 from .serialization import parse_data, make_df
 
@@ -143,7 +145,8 @@ class AsyncInfluxDBClient:
 
     @runner
     async def query(self, q: AnyStr, db=None, epoch='ns',
-                    chunked=False, chunk_size=None, **kwargs) -> Union[AsyncGenerator, dict]:
+                    chunked=False, chunk_size=None,
+                    chunked_with_series=False, **kwargs) -> Union[AsyncGenerator, dict]:
         """Sends a query to InfluxDB.
         Please refer to the InfluxDB documentation for all the possible queries:
         https://docs.influxdata.com/influxdb/v1.2/query_language/spec/#queries
@@ -166,6 +169,7 @@ class AsyncInfluxDBClient:
             a dictionary containing the parsed JSON response.
         """
 
+        @async_generator
         async def _chunked_generator(func, url, data):
             async with func(url, **data) as resp:
                 async for chunk in resp.content:
@@ -183,7 +187,10 @@ class AsyncInfluxDBClient:
                                            for col in series['columns']]
                             Point = namedtuple('Point', field_names)
                             for point in series['values']:
-                                yield Point(*point)
+                                if chunked_with_series:
+                                    yield (series['name'], Point(*point))
+                                else:
+                                    yield Point(*point)
 
         try:
             db = self.db if db is None else db
