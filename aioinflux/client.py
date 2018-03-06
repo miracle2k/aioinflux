@@ -202,7 +202,7 @@ class InfluxDBClient:
                 # The number 16 is arbitrary (may be too large/small).
                 resp.content._high_water *= 16
                 async for chunk in resp.content:
-                    chunk = json.loads(chunk)
+                    chunk = json.loads(chunk.decode('utf-8'))
                     self._check_error(chunk)
                     await yield_(chunk)
 
