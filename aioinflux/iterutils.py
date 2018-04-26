@@ -1,4 +1,5 @@
 from typing import Optional, Generator, Callable
+from async_generator import async_generator, yield_
 
 
 class InfluxDBResult:
@@ -56,17 +57,20 @@ class InfluxDBChunkedResult:
     def __aiter__(self):
         return self.iterpoints()
 
+    @async_generator
     async def iterpoints(self):
         async for chunk in self._gen:
             for i in iterpoints(chunk, parser=self.parser):
-                yield i
+                await yield_(i)
 
+    @async_generator
     async def iterchunks(self, wrap=False):
         async for chunk in self._gen:
             if wrap:
-                yield InfluxDBResult(chunk, parser=self.parser, query=self.query)
+                result = InfluxDBResult(chunk, parser=self.parser, query=self.query)
+                await yield_(result)
             else:
-                yield chunk
+                await yield_(chunk)
 
 
 def iterpoints(resp: dict, parser: Optional[Callable] = None) -> Generator:
